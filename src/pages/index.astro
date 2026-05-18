@@ -63,13 +63,16 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         </div>
     </form>
 
-    <div id="show-keys-div" class="mb-5 w-50 mx-auto" style="display: block;">
+    <div id="show-keys-div" class="mb-5 w-50 mx-auto" style="display: none;">
         <h3>Public key</h3>
-        <textarea id="public-key-textarea" class="w-75 mb-4" readonly></textarea>
+        <textarea id="public-key-textarea" class="w-75 mb-2" readonly></textarea>
+        <button id="download-button-public-key" class="btn btn-primary btn mb-4">Download public key</button>
         <h3>Private key</h3>
-        <textarea id="private-key-textarea" class="w-75 mb-4" readonly></textarea>
+        <textarea id="private-key-textarea" class="w-75 mb-2" readonly></textarea>
+        <button id="download-button-private-key" class="btn btn-primary btn mb-4">Download private key</button>
         <h3>Revocation certificate</h3>
-        <textarea id="revocation-certificate-textarea" class="w-75" readonly></textarea>
+        <textarea id="revocation-certificate-textarea" class="w-75 mb-2" readonly></textarea>
+        <button id="download-button-revocation-certificate" class="btn btn-primary btn">Download revocation certificate</button>
     </div>
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3">

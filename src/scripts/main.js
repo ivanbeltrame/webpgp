@@ -54,6 +54,16 @@ form.addEventListener("submit", (event) => {
     ).show();
 });
 
+document.getElementById("download-button-public-key").addEventListener("click", (event) => {
+    downloadTextAsFile(publicKeyTextarea.value, "public_key.asc");
+});
+document.getElementById("download-button-private-key").addEventListener("click", (event) => {
+    downloadTextAsFile(privateKeyTextarea.value, "private_key.asc");
+});
+document.getElementById("download-button-revocation-certificate").addEventListener("click", (event) => {
+    downloadTextAsFile(revocationCertificateTextarea.value, "revocation_certificate.asc");
+});
+
 async function generateCurveKeys(name, email, passphrase, keyExpirationTime) {
     const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
         type: 'ecc',
@@ -227,6 +237,27 @@ function deleteKeysFromIndexedDB(email) {
 
         request.onerror = () => reject(request.error);
     });
+}
+
+function downloadTextAsFile(text, filename) {
+  // 1. Create a Blob with the text content and set the MIME type
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+
+  // 2. Create a temporary URL pointing to the Blob
+  const url = URL.createObjectURL(blob);
+
+  // 3. Create a hidden anchor element
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename; // Sets the default file name for the download
+
+  // 4. Append to DOM (required for Firefox compatibility), trigger click, and cleanup
+  document.body.appendChild(link);
+  link.click();
+  
+  // 5. Clean up the DOM and revoke the URL to free up memory
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 // async function populateKeyDropdown() {
