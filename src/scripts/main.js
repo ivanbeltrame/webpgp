@@ -7,6 +7,20 @@ const revocationCertificateTextarea = document.getElementById("revocation-certif
 const showKeysDiv = document.getElementById("show-keys-div");
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
+if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
+    document.getElementById("fieldset-form").disabled = true;
+
+    bootstrap.Toast.getOrCreateInstance(
+        document.getElementById("webCryptoAPI-FailToast"),
+        {
+            delay: 7000,
+            autohide: true
+        }
+    ).show();
+
+    document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
+}
+
 form.addEventListener("submit", (event) => {
     event.preventDefault();
 
@@ -37,8 +51,11 @@ form.addEventListener("submit", (event) => {
         case "curve":
             generateCurveKeys(fullName, email, passphrase, deltaSeconds);
             break;
-        case "rsa":
-            generateRSAKeys(fullName, email, passphrase, deltaSeconds);
+        case "rsa2048":
+            generateRSAKeys(2048, fullName, email, passphrase, deltaSeconds);
+            break;
+        case "rsa4096":
+            generateRSAKeys(4096, fullName, email, passphrase, deltaSeconds);
             break;
         default:
             alert("keyType not defined!");
@@ -78,10 +95,10 @@ async function generateCurveKeys(name, email, passphrase, keyExpirationTime) {
     showKeys(name, email, publicKey, privateKey, revocationCertificate);
 }
 
-async function generateRSAKeys(name, email, passphrase, keyExpirationTime) {
+async function generateRSAKeys(rsaBits, name, email, passphrase, keyExpirationTime) {
     const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
         type: 'rsa',
-        rsaBits: 2048,
+        rsaBits: rsaBits,
         userIDs: [{ name: name, email: email }],
         passphrase: passphrase,
         keyExpirationTime: keyExpirationTime
