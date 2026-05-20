@@ -1,0 +1,25 @@
+---
+import DefaultLayout from "@/layouts/DefaultLayout.astro";
+---
+<DefaultLayout title="Home" description="desc">
+    <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
+        WebCrypto API not available - Make sure to use HTTPS and a modern browser.
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="webCryptoAPI-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-light">
+                <strong class="me-auto">WebCrypto API not available</strong>
+                <small>Now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Make sure to use HTTPS and a modern browser.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+    </script>
+</DefaultLayout>

@@ -1,124 +1,4 @@
-import * as bootstrap from "bootstrap";
-
-const form = document.getElementById("key-generation-form");
-const publicKeyTextarea = document.getElementById("public-key-textarea");
-const privateKeyTextarea = document.getElementById("private-key-textarea");
-const revocationCertificateTextarea = document.getElementById("revocation-certificate-textarea");
-const showKeysDiv = document.getElementById("show-keys-div");
-const ONE_YEAR = 60 * 60 * 24 * 365;
-
-if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
-    document.getElementById("fieldset-form").disabled = true;
-
-    bootstrap.Toast.getOrCreateInstance(
-        document.getElementById("webCryptoAPI-FailToast"),
-        {
-            delay: 7000,
-            autohide: true
-        }
-    ).show();
-
-    document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
-}
-
-form.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(form);
-
-    const keyType = formData.get("key-type-radio");
-    const fullName = formData.get("full-name");
-    const email = formData.get("email");
-    const passphrase = formData.get("passphrase");
-    const expirationDate = formData.get("expiration-date");
-
-    let deltaSeconds;
-    if (expirationDate === "custom") {
-        const dateObject = new Date(formData.get("custom-date"));
-        deltaSeconds = (dateObject.getTime() / 1000) - Math.floor(Date.now() / 1000);
-    } else if (expirationDate === "1") {
-        deltaSeconds = ONE_YEAR;
-    } else if (expirationDate === "2") {
-        deltaSeconds = ONE_YEAR * 2;
-    } else if (expirationDate === "3") {
-        deltaSeconds = ONE_YEAR * 3;
-    } else {
-        alert("expirationDate not defined!");
-        return;
-    }
-
-    switch (keyType) {
-        case "curve":
-            generateCurveKeys(fullName, email, passphrase, deltaSeconds);
-            break;
-        case "rsa2048":
-            generateRSAKeys(2048, fullName, email, passphrase, deltaSeconds);
-            break;
-        case "rsa4096":
-            generateRSAKeys(4096, fullName, email, passphrase, deltaSeconds);
-            break;
-        default:
-            alert("keyType not defined!");
-            return;
-    }
-
-    bootstrap.Toast.getOrCreateInstance(
-        document.getElementById("successToast"),
-        {
-            delay: 7000,
-            autohide: true
-        }
-    ).show();
-});
-
-document.getElementById("download-button-public-key").addEventListener("click", (event) => {
-    downloadTextAsFile(publicKeyTextarea.value, "public_key.asc");
-});
-document.getElementById("download-button-private-key").addEventListener("click", (event) => {
-    downloadTextAsFile(privateKeyTextarea.value, "private_key.asc");
-});
-document.getElementById("download-button-revocation-certificate").addEventListener("click", (event) => {
-    downloadTextAsFile(revocationCertificateTextarea.value, "revocation_certificate.asc");
-});
-
-async function generateCurveKeys(name, email, passphrase, keyExpirationTime) {
-    const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
-        type: 'ecc',
-        curve: 'curve25519',
-        userIDs: [{ name: name, email: email }],
-        passphrase: passphrase,
-        keyExpirationTime: keyExpirationTime
-    });
-
-    await saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate);
-
-    showKeys(name, email, publicKey, privateKey, revocationCertificate);
-}
-
-async function generateRSAKeys(rsaBits, name, email, passphrase, keyExpirationTime) {
-    const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
-        type: 'rsa',
-        rsaBits: rsaBits,
-        userIDs: [{ name: name, email: email }],
-        passphrase: passphrase,
-        keyExpirationTime: keyExpirationTime
-    });
-
-    await saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate);
-
-    showKeys(name, email, publicKey, privateKey, revocationCertificate);
-}
-
-function showKeys(name, email, publicKey, privateKey, revocationCertificate) {
-    publicKeyTextarea.textContent = publicKey;
-    privateKeyTextarea.textContent = privateKey;
-    revocationCertificateTextarea.textContent = revocationCertificate;
-
-    showKeysDiv.style.display = "block";
-    showKeysDiv.scrollIntoView();
-}
-
-function saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate) {
+export function saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate) {
     return new Promise((resolve, reject) => {
         // Open (or create) the database
         const request = indexedDB.open("PGPKeyStore", 1);
@@ -163,7 +43,7 @@ function saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCerti
     });
 }
 
-function getKeysFromIndexedDB(email) {
+export function getKeysFromIndexedDB(email) {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open("PGPKeyStore", 1);
 
@@ -187,7 +67,7 @@ function getKeysFromIndexedDB(email) {
     });
 }
 
-function getSavedEmailsList() {
+export function getSavedEmailsList() {
     return new Promise((resolve, reject) => {
         // Open the existing database
         const request = indexedDB.open("PGPKeyStore", 1);
@@ -221,7 +101,7 @@ function getSavedEmailsList() {
     });
 }
 
-function deleteKeysFromIndexedDB(email) {
+export function deleteKeysFromIndexedDB(email) {
     return new Promise((resolve, reject) => {
         // Open the existing database connection
         const request = indexedDB.open("PGPKeyStore", 1);
@@ -256,7 +136,7 @@ function deleteKeysFromIndexedDB(email) {
     });
 }
 
-function downloadTextAsFile(text, filename) {
+export function downloadTextAsFile(text, filename) {
   // 1. Create a Blob with the text content and set the MIME type
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
 
