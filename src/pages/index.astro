@@ -6,7 +6,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
             WebCrypto API not available - Make sure to use HTTPS and a modern browser.
         </div>
-        <fieldset id="fieldset-form">
+        <fieldset id="fieldset">
             <h2>Generate key pair</h2>
             <fieldset>
                 <legend>Key type</legend>
@@ -168,7 +168,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         });
 
         if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
-            document.getElementById("fieldset-form").disabled = true;
+            document.getElementById("fieldset").disabled = true;
 
             Toast.getOrCreateInstance(
                 document.getElementById("webCryptoAPI-FailToast"),

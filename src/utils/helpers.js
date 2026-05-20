@@ -136,6 +136,56 @@ export function deleteKeysFromIndexedDB(email) {
     });
 }
 
+export function getAllPGPKeys() {
+    return new Promise((resolve, reject) => {
+        // 1. Open the database connection
+        const openRequest = indexedDB.open('PGPKeyStore');
+
+        // Handle database upgrade if it doesn't exist yet
+        openRequest.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('keys')) {
+                db.createObjectStore('keys'); // Adjust options (e.g., { keyPath: 'id' }) if needed
+            }
+        };
+
+        openRequest.onsuccess = (event) => {
+            const db = event.target.result;
+
+            try {
+                // 2. Open a read-only transaction on the 'keys' object store
+                const transaction = db.transaction('keys', 'readonly');
+                const store = transaction.objectStore('keys');
+
+                // 3. Request all records from the store
+                const getRequest = store.getAll();
+
+                getRequest.onsuccess = () => {
+                    // Resolves with an array of all elements in the store
+                    resolve(getRequest.result);
+                };
+
+                getRequest.onerror = () => {
+                    reject(new Error(`Failed to retrieve keys from store: ${getRequest.error.message}`));
+                };
+                
+                // Clean up database connection when transaction completes
+                transaction.oncomplete = () => {
+                    db.close();
+                };
+
+            } catch (error) {
+                db.close();
+                reject(new Error(`Transaction setup failed: ${error.message}`));
+            }
+        };
+
+        openRequest.onerror = () => {
+            reject(new Error(`Failed to open IndexedDB 'PGPKeyStore': ${openRequest.error.message}`));
+        };
+    });
+}
+
 export function downloadTextAsFile(text, filename) {
   // 1. Create a Blob with the text content and set the MIME type
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });

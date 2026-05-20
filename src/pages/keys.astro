@@ -2,8 +2,15 @@
 import DefaultLayout from "@/layouts/DefaultLayout.astro";
 ---
 <DefaultLayout title="Home" description="desc">
-    <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
-        WebCrypto API not available - Make sure to use HTTPS and a modern browser.
+    <div class="my-5 w-50 mx-auto">
+        <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
+            WebCrypto API not available - Make sure to use HTTPS and a modern browser.
+        </div>
+
+        <fieldset id="fieldset">
+            <h2>Stored keys</h2>
+            <ul id="keys-list">Loading keys...</ul>
+        </fieldset>
     </div>
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
@@ -20,6 +27,51 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
     </div>
 
     <script>
-        
+        import Toast from "bootstrap/js/dist/toast";
+        import { getAllPGPKeys } from "@/utils/helpers.js";
+
+        if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
+            document.getElementById("fieldset").disabled = true;
+
+            Toast.getOrCreateInstance(
+                document.getElementById("webCryptoAPI-FailToast"),
+                {
+                    delay: 7000,
+                    autohide: true
+                }
+            ).show();
+
+            document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
+        } else {
+            displayKeys();
+        }
+
+        async function displayKeys() {
+            const listElement = document.getElementById('keys-list');
+            
+            try {
+                // Await the promise to get your array of keys cleanly
+                const keys = await getAllPGPKeys();
+                
+                if (keys.length === 0) {
+                    listElement.textContent = "No PGP keys found in local storage.";
+                    return;
+                }
+
+                listElement.innerHTML = keys
+                    .map(key => `<li>${escapeHTML(key.email || 'Unnamed Key')}</li>`)
+                    .join('');
+                
+            } catch (error) {
+                console.error(error);
+                listElement.textContent = "Error loading secure keys.";
+            }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
     </script>
 </DefaultLayout>
