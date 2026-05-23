@@ -119,6 +119,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
     <script>
         import Toast from "bootstrap/js/dist/toast";
         import { saveKeys, downloadTextAsFile } from "@/utils/helpers.js";
+        import { generateKey, readKey } from "openpgp";
 
         const expirationDateForm = document.getElementById("expiration-date-form");
         const datePicker = document.getElementById("datePicker");
@@ -131,16 +132,16 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         const ONE_YEAR = 60 * 60 * 24 * 365;
 
         async function generateCurveKeys(name: string, email: string, passphrase: string, keyExpirationTime: number) {
-            const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
-                type: 'ecc',
-                curve: 'curve25519',
+            const { privateKey, publicKey, revocationCertificate } = await generateKey({
+                type: "ecc",
+                curve: "curve25519",
                 userIDs: [{ name: name, email: email }],
                 passphrase: passphrase,
                 keyExpirationTime: keyExpirationTime
             });
 
-            const readKey = await openpgp.readKey({ armoredKey: publicKey });
-            const fingerprint = readKey.getFingerprint();
+            const key = await readKey({ armoredKey: publicKey });
+            const fingerprint = key.getFingerprint();
 
             showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
 
@@ -148,16 +149,16 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         }
 
         async function generateRSAKeys(rsaBits: number, name: string, email: string, passphrase: string, keyExpirationTime: number) {
-            const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
-                type: 'rsa',
+            const { privateKey, publicKey, revocationCertificate } = await generateKey({
+                type: "rsa",
                 rsaBits: rsaBits,
                 userIDs: [{ name: name, email: email }],
                 passphrase: passphrase,
                 keyExpirationTime: keyExpirationTime
             });
 
-            const readKey = await openpgp.readKey({ armoredKey: publicKey });
-            const fingerprint = readKey.getFingerprint();
+            const key = await readKey({ armoredKey: publicKey });
+            const fingerprint = key.getFingerprint();
 
             showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
 
@@ -185,7 +186,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             }
         });
 
-        if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
+        if (!(typeof window !== "undefined" && window.crypto && window.crypto.subtle)) {
             document.getElementById("fieldset").disabled = true;
 
             Toast.getOrCreateInstance(

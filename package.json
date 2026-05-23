@@ -1,5 +1,5 @@
 {
-  "name": "openpgp",
+  "name": "webpgp",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -15,7 +15,8 @@
     "astro": "^6.3.3",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
-    "idb-keyval": "^6.2.4"
+    "idb-keyval": "^6.2.4",
+    "openpgp": "^6.3.0"
   },
   "devDependencies": {
     "@fullhuman/postcss-purgecss": "^8.0.0",
