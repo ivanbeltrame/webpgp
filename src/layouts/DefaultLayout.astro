@@ -12,7 +12,12 @@ const { title, description } = Astro.props;
 <Head title={ title } description = { description }/>
 <body>
     <Navbar/>
-    <slot/>
+    <div class="my-4 w-50 mx-auto">
+        <div class="alert alert-warning" role="alert">
+            This website is under construction! It may not work properly.
+        </div>
+        <slot/>
+    </div>
     <Footer/>
 </body>
 <script is:inline src="/openpgp/openpgp.min.js"></script>

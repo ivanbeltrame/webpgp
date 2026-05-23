@@ -2,7 +2,7 @@
 import DefaultLayout from "@/layouts/DefaultLayout.astro";
 ---
 <DefaultLayout title="Home" description="desc">
-    <form id="key-generation-form" class="my-5 w-50 mx-auto">
+    <form id="key-generation-form">
         <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
             WebCrypto API not available - Make sure to use HTTPS and a modern browser.
         </div>
@@ -71,7 +71,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         </fieldset>
     </form>
 
-    <div id="show-keys-div" class="mb-5 w-50 mx-auto" style="display: none;">
+    <div id="show-keys-div" class="mt-3" style="display: none;">
         <h3>Public key</h3>
         <textarea id="public-key-textarea" class="w-75 mb-2" readonly></textarea>
         <br><button id="download-button-public-key" class="btn btn-primary btn mb-4">Download public key</button>
@@ -104,11 +104,21 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                 Make sure to use HTTPS and a modern browser.
             </div>
         </div>
+        <div id="indexeddb-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-light">
+                <strong class="me-auto">IndexedDB fail</strong>
+                <small>Now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                The generated key was not saved in the database!
+            </div>
+        </div>
     </div>
 
     <script>
         import Toast from "bootstrap/js/dist/toast";
-        import { saveKeysToIndexedDB, downloadTextAsFile } from "@/utils/helpers.js";
+        import { saveKeys, downloadTextAsFile } from "@/utils/helpers.js";
 
         const expirationDateForm = document.getElementById("expiration-date-form");
         const datePicker = document.getElementById("datePicker");
@@ -120,7 +130,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
 
         const ONE_YEAR = 60 * 60 * 24 * 365;
 
-        async function generateCurveKeys(name, email, passphrase, keyExpirationTime) {
+        async function generateCurveKeys(name: string, email: string, passphrase: string, keyExpirationTime: number) {
             const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
                 type: 'ecc',
                 curve: 'curve25519',
@@ -129,12 +139,15 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                 keyExpirationTime: keyExpirationTime
             });
 
-            await saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate);
+            const readKey = await openpgp.readKey({ armoredKey: publicKey });
+            const fingerprint = readKey.getFingerprint();
 
-            showKeys(name, email, publicKey, privateKey, revocationCertificate);
+            showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
+
+            saveKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
         }
 
-        async function generateRSAKeys(rsaBits, name, email, passphrase, keyExpirationTime) {
+        async function generateRSAKeys(rsaBits: number, name: string, email: string, passphrase: string, keyExpirationTime: number) {
             const { privateKey, publicKey, revocationCertificate } = await openpgp.generateKey({
                 type: 'rsa',
                 rsaBits: rsaBits,
@@ -143,18 +156,23 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                 keyExpirationTime: keyExpirationTime
             });
 
-            await saveKeysToIndexedDB(name, email, publicKey, privateKey, revocationCertificate);
+            const readKey = await openpgp.readKey({ armoredKey: publicKey });
+            const fingerprint = readKey.getFingerprint();
 
-            showKeys(name, email, publicKey, privateKey, revocationCertificate);
+            showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
+
+            saveKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
         }
 
-        function showKeys(name, email, publicKey, privateKey, revocationCertificate) {
-            publicKeyTextarea.textContent = publicKey;
-            privateKeyTextarea.textContent = privateKey;
-            revocationCertificateTextarea.textContent = revocationCertificate;
+        function showKeys(fingerprint: string, name: string, email: string, publicKey: string, privateKey: string, revocationCertificate: string) {
+            if (publicKeyTextarea) publicKeyTextarea.textContent = publicKey;
+            if (privateKeyTextarea) privateKeyTextarea.textContent = privateKey;
+            if (revocationCertificateTextarea) revocationCertificateTextarea.textContent = revocationCertificate;
 
-            showKeysDiv.style.display = "block";
-            showKeysDiv.scrollIntoView();
+            if (showKeysDiv) {
+                showKeysDiv.style.display = "block";
+                showKeysDiv.scrollIntoView();
+            }
         }
 
         expirationDateForm?.addEventListener("change", (event) => {

@@ -14,7 +14,8 @@
   "dependencies": {
     "astro": "^6.3.3",
     "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1"
+    "bootstrap-icons": "^1.13.1",
+    "idb-keyval": "^6.2.4"
   },
   "devDependencies": {
     "@fullhuman/postcss-purgecss": "^8.0.0",

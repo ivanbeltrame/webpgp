@@ -1,17 +1,34 @@
 ---
 import DefaultLayout from "@/layouts/DefaultLayout.astro";
 ---
-<DefaultLayout title="Home" description="desc">
-    <div class="my-5 w-50 mx-auto">
-        <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
-            WebCrypto API not available - Make sure to use HTTPS and a modern browser.
-        </div>
-
-        <fieldset id="fieldset">
-            <h2>Stored keys</h2>
-            <ul id="keys-list">Loading keys...</ul>
-        </fieldset>
+<DefaultLayout title="Keys" description="desc">
+    <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
+        WebCrypto API not available - Make sure to use HTTPS and a modern browser.
     </div>
+
+    <fieldset id="fieldset">
+        <h2>Stored keys</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Valid from</th>
+                    <th scope="col">Download</th>
+                </tr>
+            </thead>
+            <tbody id="keys-table">
+                <tr>
+                    <th scope="row"></th>
+                    <td>Loading keys...</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </fieldset>
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="webCryptoAPI-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -28,7 +45,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
 
     <script>
         import Toast from "bootstrap/js/dist/toast";
-        import { getAllPGPKeys } from "@/utils/helpers.js";
+        import { getAllKeys } from "@/utils/helpers.js";
 
         if (!(typeof window !== 'undefined' && window.crypto && window.crypto.subtle)) {
             document.getElementById("fieldset").disabled = true;
@@ -47,24 +64,24 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         }
 
         async function displayKeys() {
-            const listElement = document.getElementById('keys-list');
+            const tableElement = document.getElementById('keys-table');
             
             try {
                 // Await the promise to get your array of keys cleanly
-                const keys = await getAllPGPKeys();
+                const keys = await getAllKeys();
                 
                 if (keys.length === 0) {
-                    listElement.textContent = "No PGP keys found in local storage.";
+                    tableElement.innerHTML = "<tr><th scope='row'></th><td>No PGP keys found in local storage.</td><td></td><td></td><td></td></tr>";
                     return;
                 }
 
-                listElement.innerHTML = keys
-                    .map(key => `<li>${escapeHTML(key.email || 'Unnamed Key')}</li>`)
+                tableElement.innerHTML = keys
+                    .map((key, index) => `<tr><th scope='row'>${index+1}</th><td>${escapeHTML(key[1].name || 'Unnamed Key')}</td><td>${escapeHTML(key[1].email || 'No email')}</td><td>${escapeHTML(key[1].createdAt)}</td><td></td></tr>`)
                     .join('');
                 
             } catch (error) {
                 console.error(error);
-                listElement.textContent = "Error loading secure keys.";
+                tableElement.textContent = "Error loading secure keys.";
             }
         }
 
