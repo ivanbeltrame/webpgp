@@ -1,0 +1,10 @@
+import{_ as s,s as c,g as d,a as l}from"./helpers.FN5miW7K.js";typeof window<"u"&&window.crypto&&window.crypto.subtle&&p();document.getElementById("import-public-key-button")?.addEventListener("click",()=>{const e=document.createElement("input");e.type="file",e.accept=".asc",e.addEventListener("change",n=>{const i=n.target?.files[0];if(!i)return;const t=new FileReader;t.onload=async r=>{const o=(await s({armoredKey:r.target?.result})).getFingerprint();c(o,r.target?.result)},t.onerror=r=>console.error("Error reading file:",r),t.readAsText(i)}),e.click()});async function p(){const e=document.getElementById("keys-table");try{const n=await d();if(n.length===0){e.innerHTML="<tr><th scope='row'></th><td>No PGP keys found in local storage.</td><td></td><td></td><td></td></tr>";return}const i=await Promise.all(n.map(async(t,r)=>{const a=await l(t[1].publicKey);return{index:r+1,userID:a||"No userID",hasPrivate:t[1].privateKey?"checked":"",fingerprint:t[0]}}));e.innerHTML=i.map(t=>`<tr>
+                        <th scope='row'>${t.index}</th>
+                        <td>${y(t.userID)}</td>
+                        <td>not implemented</td>
+                        <td class="text-center"><input class="form-check-input" type="checkbox" ${t.hasPrivate} disabled></td>
+                        <td>
+                            <button type="button" class="btn btn-outline-secondary encrypt-decrypt" data-fingerprint="${t.fingerprint}">Encrypt/Decrypt</button>
+                            <button type="button" class="btn btn-outline-secondary sign-verify" data-fingerprint="${t.fingerprint}">Sign/Verify</button>
+                        </td>
+                        </tr>`).join(""),e?.addEventListener("click",t=>{(t.target?.matches(".encrypt-decrypt")||t.target?.matches(".sign-verify"))&&console.log("Clicked element text:",t.target.dataset.fingerprint)})}catch(n){console.error(n),e&&(e.textContent="Error loading secure keys.")}}function y(e){return e.replace(/[&<>'"]/g,n=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[n]||n)}

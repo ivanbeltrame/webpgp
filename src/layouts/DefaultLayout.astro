@@ -12,17 +12,48 @@ const { title, description } = Astro.props;
 <Head title={ title } description = { description }/>
 <body>
     <Navbar/>
-    <div class="row">
-        <div class="my-4 col-10 col-md-8 col-lg-6 mx-auto">
+    <div class="row w-100 mx-0">
+        <!-- <div class="my-4 col-10 col-md-8 col-xxl-6 mx-auto"> -->
+        <div class="my-4 col-10 col-md-8 mx-auto">
             <div class="alert alert-warning" role="alert">
                 This website is under construction! It may not work properly.
             </div>
             <slot/>
         </div>
     </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="webCryptoAPI-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-light">
+                <strong class="me-auto">WebCrypto API not available</strong>
+                <small>Now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Make sure to use HTTPS and a modern browser.
+            </div>
+        </div>
+    </div>
     <Footer/>
 </body>
 <script>
     import Collapse from "bootstrap/js/dist/collapse";
+    import Toast from "bootstrap/js/dist/toast";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!(typeof window !== "undefined" && window.crypto && window.crypto.subtle)) {
+            const fieldsetElement = document.getElementById("fieldset");
+            if (fieldsetElement) fieldsetElement.disabled = true;
+
+            Toast.getOrCreateInstance(
+                document.getElementById("webCryptoAPI-FailToast"),
+                {
+                    delay: 7000,
+                    autohide: true
+                }
+            ).show();
+
+            document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
+        }
+    });
 </script>
 </html>

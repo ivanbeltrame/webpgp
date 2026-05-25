@@ -8,60 +8,68 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
 
     <fieldset id="fieldset">
         <h2>Stored keys</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Valid from</th>
-                    <th scope="col">Download</th>
-                </tr>
-            </thead>
-            <tbody id="keys-table">
-                <tr>
-                    <th scope="row"></th>
-                    <td>Loading keys...</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">UserID</th>
+                        <th scope="col">Valid until</th>
+                        <th scope="col">Private key</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="keys-table">
+                    <tr>
+                        <th scope="row"></th>
+                        <td>Loading keys...</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4 w-100 text-center">
+            <button id="import-public-key-button" type="submit" class="btn btn-primary">Import public key</button>
+        </div>
     </fieldset>
 
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="webCryptoAPI-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-danger text-light">
-                <strong class="me-auto">WebCrypto API not available</strong>
-                <small>Now</small>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                Make sure to use HTTPS and a modern browser.
-            </div>
-        </div>
-    </div>
-
     <script>
-        import Toast from "bootstrap/js/dist/toast";
-        import { getAllKeys } from "@/utils/helpers.js";
+        import { getAllKeys, getUserID, saveKeys } from "@/utils/helpers.js";
+        import { readKey } from "openpgp";
 
-        if (!(typeof window !== "undefined" && window.crypto && window.crypto.subtle)) {
-            document.getElementById("fieldset").disabled = true;
-
-            Toast.getOrCreateInstance(
-                document.getElementById("webCryptoAPI-FailToast"),
-                {
-                    delay: 7000,
-                    autohide: true
-                }
-            ).show();
-
-            document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
-        } else {
+        if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
             displayKeys();
         }
+
+        document.getElementById("import-public-key-button")?.addEventListener("click", () => {
+            // Create a temporary input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.asc';
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target?.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+
+                reader.onload = async (e) => {
+                    const key = await readKey({ armoredKey: e.target?.result });
+                    const fingerprint = key.getFingerprint();
+
+                    saveKeys(fingerprint, e.target?.result);
+                }
+
+                reader.onerror = (err) => console.error('Error reading file:', err);
+
+                reader.readAsText(file);
+            });
+
+            fileInput.click();
+        });
 
         async function displayKeys() {
             const tableElement = document.getElementById("keys-table");
@@ -75,17 +83,44 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                     return;
                 }
 
-                tableElement.innerHTML = keys
-                    .map((key, index) => `<tr><th scope='row'>${index+1}</th><td>${escapeHTML(key[1].name || 'Unnamed Key')}</td><td>${escapeHTML(key[1].email || 'No email')}</td><td>${escapeHTML(key[1].createdAt)}</td><td></td></tr>`)
+                const resolvedKeys = await Promise.all(keys.map(async (key, index) => {
+                    const userID = await getUserID(key[1].publicKey);
+                    return {
+                        index: index + 1,
+                        userID: userID || 'No userID',
+                        hasPrivate: key[1].privateKey ? "checked" : "",
+                        fingerprint: key[0]
+                    };
+                }));
+
+                tableElement.innerHTML = resolvedKeys
+                    .map(item => `<tr>
+                        <th scope='row'>${item.index}</th>
+                        <td>${escapeHTML(item.userID)}</td>
+                        <td>${"not implemented"}</td>
+                        <td class="text-center"><input class="form-check-input" type="checkbox" ${item.hasPrivate} disabled></td>
+                        <td>
+                            <button type="button" class="btn btn-outline-secondary encrypt-decrypt" data-fingerprint="${item.fingerprint}">Encrypt/Decrypt</button>
+                            <button type="button" class="btn btn-outline-secondary sign-verify" data-fingerprint="${item.fingerprint}">Sign/Verify</button>
+                        </td>
+                        </tr>`)
                     .join('');
+
+                tableElement?.addEventListener('click', (e) => {
+                    if (e.target?.matches('.encrypt-decrypt')) {
+                        console.log('Clicked element text:', e.target.dataset.fingerprint);
+                    } else if (e.target?.matches('.sign-verify')) {
+                        console.log('Clicked element text:', e.target.dataset.fingerprint);
+                    }
+                });
                 
             } catch (error) {
                 console.error(error);
-                tableElement.textContent = "Error loading secure keys.";
+                if (tableElement) tableElement.textContent = "Error loading secure keys.";
             }
         }
 
-        function escapeHTML(str) {
+        function escapeHTML(str: string) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );

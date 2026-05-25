@@ -1,13 +1,11 @@
 import { set, entries } from 'idb-keyval';
+import { readKey } from "openpgp";
 
-export function saveKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate) {
+export function saveKeys(fingerprint, publicKey, privateKey = "", revocationCertificate = "") {
     const keys = {
-        name,
-        email,
         publicKey,
         privateKey,
-        revocationCertificate,
-        createdAt: new Date().toISOString()
+        revocationCertificate
     }
     
     set(fingerprint, keys)
@@ -34,4 +32,18 @@ export function downloadTextAsFile(text, filename) {
   
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export async function getUserID(armoredKey) {
+    const publicKey = await readKey({ armoredKey });
+
+    // Access the userIDs array from the primary key
+    const userIDs = publicKey.getUserIDs();
+
+    if (userIDs && userIDs.length > 0) {
+        // Return the primary or first user ID
+        return userIDs[0];
+    } else {
+        throw new Error("No user identities found in this public key.");
+    }
 }

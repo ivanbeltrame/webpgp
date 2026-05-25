@@ -11,8 +11,12 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             <fieldset>
                 <legend>Key type</legend>
                 <div class="mb-3 form-check">
-                    <input class="form-check-input" type="radio" name="key-type-radio" id="curve-radio" value="curve" checked>
-                    <label class="form-check-label" for="curve-radio">Curve 255 bit</label>
+                    <input class="form-check-input" type="radio" name="key-type-radio" id="curve255-radio" value="curve255" checked>
+                    <label class="form-check-label" for="curve255-radio">Curve 255 bit (v4)</label>
+                </div>
+                <div class="mb-3 form-check">
+                    <input class="form-check-input" type="radio" name="key-type-radio" id="curve255-exp-radio" value="curve255-exp">
+                    <label class="form-check-label" for="curve255-exp-radio">Curve 255 bit (v6 - experimental)</label>
                 </div>
                 <div class="mb-3 form-check">
                     <input class="form-check-input" type="radio" name="key-type-radio" id="rsa2048-radio" value="rsa2048">
@@ -94,16 +98,6 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                 The key is saved securly. Check it out in the "Keys" tab.
             </div>
         </div>
-        <div id="webCryptoAPI-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-danger text-light">
-                <strong class="me-auto">WebCrypto API not available</strong>
-                <small>Now</small>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                Make sure to use HTTPS and a modern browser.
-            </div>
-        </div>
         <div id="indexeddb-FailToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header bg-danger text-light">
                 <strong class="me-auto">IndexedDB fail</strong>
@@ -121,7 +115,6 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
         import { saveKeys, downloadTextAsFile } from "@/utils/helpers.js";
         import { generateKey, readKey } from "openpgp";
 
-        const expirationDateForm = document.getElementById("expiration-date-form");
         const datePicker = document.getElementById("datePicker");
         const form = document.getElementById("key-generation-form");
         const publicKeyTextarea = document.getElementById("public-key-textarea");
@@ -131,41 +124,25 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
 
         const ONE_YEAR = 60 * 60 * 24 * 365;
 
-        async function generateCurveKeys(name: string, email: string, passphrase: string, keyExpirationTime: number) {
+        async function generateKeys(options) {
             const { privateKey, publicKey, revocationCertificate } = await generateKey({
-                type: "ecc",
-                curve: "curve25519",
-                userIDs: [{ name: name, email: email }],
-                passphrase: passphrase,
-                keyExpirationTime: keyExpirationTime
+                type: options.type,
+                rsaBits: options.rsaBits,
+                curve: options.curve,
+                userIDs: options.userIDs,
+                passphrase: options.passphrase,
+                keyExpirationTime: options.keyExpirationTime
             });
 
             const key = await readKey({ armoredKey: publicKey });
             const fingerprint = key.getFingerprint();
 
-            showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
+            showKeys(publicKey, privateKey, revocationCertificate);
 
-            saveKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
+            saveKeys(fingerprint, publicKey, privateKey, revocationCertificate);
         }
 
-        async function generateRSAKeys(rsaBits: number, name: string, email: string, passphrase: string, keyExpirationTime: number) {
-            const { privateKey, publicKey, revocationCertificate } = await generateKey({
-                type: "rsa",
-                rsaBits: rsaBits,
-                userIDs: [{ name: name, email: email }],
-                passphrase: passphrase,
-                keyExpirationTime: keyExpirationTime
-            });
-
-            const key = await readKey({ armoredKey: publicKey });
-            const fingerprint = key.getFingerprint();
-
-            showKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
-
-            saveKeys(fingerprint, name, email, publicKey, privateKey, revocationCertificate);
-        }
-
-        function showKeys(fingerprint: string, name: string, email: string, publicKey: string, privateKey: string, revocationCertificate: string) {
+        function showKeys(publicKey: string, privateKey: string, revocationCertificate: string) {
             if (publicKeyTextarea) publicKeyTextarea.textContent = publicKey;
             if (privateKeyTextarea) privateKeyTextarea.textContent = privateKey;
             if (revocationCertificateTextarea) revocationCertificateTextarea.textContent = revocationCertificate;
@@ -176,8 +153,8 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             }
         }
 
-        expirationDateForm?.addEventListener("change", (event) => {
-            const selectedValue = event.target.value;
+        document.getElementById("expiration-date-form")?.addEventListener("change", (e) => {
+            const selectedValue = e.target?.value;
             
             if (selectedValue === "1" || selectedValue === "2" || selectedValue === "3") {
                 datePicker.disabled = true;
@@ -186,45 +163,31 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             }
         });
 
-        if (!(typeof window !== "undefined" && window.crypto && window.crypto.subtle)) {
-            document.getElementById("fieldset").disabled = true;
-
-            Toast.getOrCreateInstance(
-                document.getElementById("webCryptoAPI-FailToast"),
-                {
-                    delay: 7000,
-                    autohide: true
-                }
-            ).show();
-
-            document.getElementById("webCryptoAPI-FailAlert").style.display = "block";
-        }
-
-        form.addEventListener("submit", (event) => {
-            event.preventDefault();
+        form?.addEventListener("submit", (e) => {
+            e.preventDefault();
 
             const formData = new FormData(form);
 
             const keyType = formData.get("key-type-radio");
-            const fullName = formData.get("full-name");
+            const name = formData.get("full-name");
             const email = formData.get("email");
             const passphrase = formData.get("passphrase");
             const expirationDate = formData.get("expiration-date");
 
-            let deltaSeconds;
+            let keyExpirationTime;
             switch (expirationDate) {
                 case "custom":
                     const dateObject = new Date(formData.get("custom-date"));
-                    deltaSeconds = (dateObject.getTime() / 1000) - Math.floor(Date.now() / 1000);
+                    keyExpirationTime = (dateObject.getTime() / 1000) - Math.floor(Date.now() / 1000);
                     break;
                 case "1":
-                    deltaSeconds = ONE_YEAR;
+                    keyExpirationTime = ONE_YEAR;
                     break;
                 case "2":
-                    deltaSeconds = ONE_YEAR * 2;
+                    keyExpirationTime = ONE_YEAR * 2;
                     break;
                 case "3":
-                    deltaSeconds = ONE_YEAR * 3;
+                    keyExpirationTime = ONE_YEAR * 3;
                     break;
                 default:
                     alert("expirationDate not defined!");
@@ -232,14 +195,40 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             }
 
             switch (keyType) {
-                case "curve":
-                    generateCurveKeys(fullName, email, passphrase, deltaSeconds);
+                case "curve255":
+                    generateKeys({
+                        type: "ecc",
+                        curve: "curve25519Legacy",
+                        userIDs: [{ name, email }],
+                        passphrase: passphrase,
+                        keyExpirationTime: keyExpirationTime
+                    });
+                    break;
+                case "curve255-exp":
+                    generateKeys({
+                        type: "curve25519",
+                        userIDs: [{ name, email }],
+                        passphrase: passphrase,
+                        keyExpirationTime: keyExpirationTime
+                    });
                     break;
                 case "rsa2048":
-                    generateRSAKeys(2048, fullName, email, passphrase, deltaSeconds);
+                    generateKeys({
+                        type: "rsa",
+                        rsaBits: 2048,
+                        userIDs: [{ name, email }],
+                        passphrase: passphrase,
+                        keyExpirationTime: keyExpirationTime
+                    });
                     break;
                 case "rsa4096":
-                    generateRSAKeys(4096, fullName, email, passphrase, deltaSeconds);
+                    generateKeys({
+                        type: "rsa",
+                        rsaBits: 4096,
+                        userIDs: [{ name, email }],
+                        passphrase: passphrase,
+                        keyExpirationTime: keyExpirationTime
+                    });
                     break;
                 default:
                     alert("keyType not defined!");
@@ -255,14 +244,14 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
             ).show();
         });
 
-        document.getElementById("download-button-public-key").addEventListener("click", (event) => {
-            downloadTextAsFile(publicKeyTextarea.value, "public_key.asc");
+        document.getElementById("download-button-public-key")?.addEventListener("click", () => {
+            downloadTextAsFile(publicKeyTextarea?.value, "public_key.asc");
         });
-        document.getElementById("download-button-private-key").addEventListener("click", (event) => {
-            downloadTextAsFile(privateKeyTextarea.value, "private_key.asc");
+        document.getElementById("download-button-private-key")?.addEventListener("click", () => {
+            downloadTextAsFile(privateKeyTextarea?.value, "private_key.asc");
         });
-        document.getElementById("download-button-revocation-certificate").addEventListener("click", (event) => {
-            downloadTextAsFile(revocationCertificateTextarea.value, "revocation_certificate.asc");
+        document.getElementById("download-button-revocation-certificate")?.addEventListener("click", () => {
+            downloadTextAsFile(revocationCertificateTextarea?.value, "revocation_certificate.asc");
         });
     </script>
 </DefaultLayout>
