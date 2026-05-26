@@ -113,7 +113,7 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
     <script>
         import Toast from "bootstrap/js/dist/toast";
         import { saveKeys, downloadTextAsFile } from "@/utils/helpers.js";
-        import { generateKey, readKey } from "openpgp";
+        import { generateKey } from "openpgp";
 
         const datePicker = document.getElementById("datePicker");
         const form = document.getElementById("key-generation-form");
@@ -134,12 +134,9 @@ import DefaultLayout from "@/layouts/DefaultLayout.astro";
                 keyExpirationTime: options.keyExpirationTime
             });
 
-            const key = await readKey({ armoredKey: publicKey });
-            const fingerprint = key.getFingerprint();
-
             showKeys(publicKey, privateKey, revocationCertificate);
 
-            saveKeys(fingerprint, publicKey, privateKey, revocationCertificate);
+            saveKeys(publicKey, privateKey, revocationCertificate);
         }
 
         function showKeys(publicKey: string, privateKey: string, revocationCertificate: string) {

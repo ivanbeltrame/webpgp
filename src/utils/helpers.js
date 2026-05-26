@@ -1,8 +1,20 @@
 import { set, entries } from 'idb-keyval';
 import { readKey } from "openpgp";
 
-export function saveKeys(fingerprint, publicKey, privateKey = "", revocationCertificate = "") {
+export async function saveKeys(publicKey, privateKey = "", revocationCertificate = "") {
+    const key = await readKey({ armoredKey: publicKey });
+    const fingerprint = key.getFingerprint();
+    const userIDs = key.getUserIDs();
+    let userID;
+    if (userIDs && userIDs.length > 0) {
+        // Return the primary or first user ID
+        userID = userIDs[0];
+    } else {
+        userID = "No userID";
+    }
+
     const keys = {
+        userID,
         publicKey,
         privateKey,
         revocationCertificate
@@ -15,6 +27,42 @@ export function saveKeys(fingerprint, publicKey, privateKey = "", revocationCert
 export async function getAllKeys() {
     const result = await entries();
     return result;
+}
+
+export async function armorToHex(armoredKey) {
+    const key = await readKey({ armoredKey });
+    
+    // Serialize the key directly into its raw binary format (Uint8Array)
+    const binaryKey = key.toPacketList().write();
+    
+    // Convert the Uint8Array into a single-line hex string
+    const hexString = Array.from(binaryKey)
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+        
+    return hexString;
+}
+
+export async function hexToKey(hexString) {
+    if (typeof hexString !== 'string' || hexString.length % 2 !== 0) {
+        return null
+    }
+
+    // Convert the single-line hex string back into a Uint8Array
+    const binaryKey = new Uint8Array(hexString.length / 2);
+    for (let i = 0; i < hexString.length; i += 2) {
+        binaryKey[i / 2] = parseInt(hexString.substring(i, i + 2), 16);
+    }
+
+    // Read the key from its raw binary format
+    let key;
+    try {
+        key = await readKey({ binaryKey });
+    } catch (e) {
+        return null;
+    }
+
+    return key;
 }
 
 export function downloadTextAsFile(text, filename) {
@@ -32,18 +80,4 @@ export function downloadTextAsFile(text, filename) {
   
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-}
-
-export async function getUserID(armoredKey) {
-    const publicKey = await readKey({ armoredKey });
-
-    // Access the userIDs array from the primary key
-    const userIDs = publicKey.getUserIDs();
-
-    if (userIDs && userIDs.length > 0) {
-        // Return the primary or first user ID
-        return userIDs[0];
-    } else {
-        throw new Error("No user identities found in this public key.");
-    }
 }

@@ -1,0 +1,59 @@
+---
+import DefaultLayout from "@/layouts/DefaultLayout.astro";
+---
+<DefaultLayout title="Home" description="desc">
+    <div id="webCryptoAPI-FailAlert" class="alert alert-danger" role="alert" style="display: none;">
+        WebCrypto API not available - Make sure to use HTTPS and a modern browser.
+    </div>
+    <div id="public-key-fail" class="alert alert-danger" role="alert" style="display: none;">
+        Public key corrupted!
+    </div>
+
+    <div id="main-div">
+        <h2>Add a public key?</h2>
+        <p>
+            UserID: <span id="userid-span"></span><br>
+            Fingerprint: <span id="fingerprint-span"></span>
+        </p>
+        <button class="btn btn-primary">Importa</button>
+        <button class="btn btn-danger">Non importare</button>
+    </div>
+
+    <script>
+        import { hexToKey } from "@/utils/helpers.js";
+
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        // const publicKey = urlParams.get("k");
+        let publicKey = "c633046a15e01b16092b06010401da470f0101074002042e252d69a4b0bdbe99b7d581bab0b485f7b87d7ea86370a94524527b2a57cd096e203c6e406e2e6e3ec2c0190413160a008b05826a15e01b058901e13380030b090709107e2afee7a3868c8c451400000000001c002073616c74406e6f746174696f6e732e6f70656e7067706a732e6f72677e22a26064721fc2f68740d4ff1f422a4208034661bd529208a1d5c8bd9509c805150a080e0c0416000201021901029b03021e0116210493af8a7605b52300a2902ce67e2afee7a3868c8c00002d3b0100d237a7fa5096d24be4d1b86d6d552d7cc23bbbfca378bff8e8c87fe8143cf80b00fc0f8df5d8517f6982c14736189e5e46fc646dedae283d11a1022ca72540e19004ce38046a15e01b120a2b0601040197550105010107402860181b85be093b752ddd9958a80cc00b3967e7ffd0f94897aabddcb075fb3503010807c2c0040418160a007605826a15e01b058901e1338009107e2afee7a3868c8c451400000000001c002073616c74406e6f746174696f6e732e6f70656e7067706a732e6f7267318df52d631bfbbf0991eeae0bfba1076d689229833794c08b4b2d5507830459029b0c16210493af8a7605b52300a2902ce67e2afee7a3868c8c0000911400fd1dddbba850a3ac3f79efc6f3d6b5ef7a3b72e9141bc5569f96802b6efd3624ca00fe2f107bb9a772708435c9290b92f0b2755db036b3fa7c9b0e570ef9a67d87dd06"
+
+        function corruptedKey() {
+            document.getElementById("public-key-fail").style.display = "block";
+            document.getElementById("main-div").innerHTML = "back to home";
+        }
+
+        if (!publicKey) corruptedKey();
+
+        try {
+            hexToKey(publicKey).then(key => {
+                if (!key) corruptedKey()
+                else {const userIDs = key.getUserIDs();
+                    let userID;
+                    if (userIDs && userIDs.length > 0) {
+                        // Return the primary or first user ID
+                        userID = userIDs[0];
+                    } else {
+                        userID = "No userID";
+                    }
+                    const fingerprint = key.getFingerprint();
+
+                    document.getElementById("userid-span").textContent = userID;
+                    document.getElementById("fingerprint-span").textContent = fingerprint.replace(/(.{4})(?!$)/g, '$1 ').toUpperCase();
+                }
+            });
+        } catch (e) {
+            corruptedKey()
+        }
+
+    </script>
+</DefaultLayout>
